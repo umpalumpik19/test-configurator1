@@ -1,0 +1,23 @@
+{
+  "layers": {
+    "Latex Мягкий": "LatexSoft",
+    "Latex Средне-твердый": "LatexMedim",
+    "Paměťová pěna Мягкая": "MemorySoft",
+    "Paměťová pěna Средне-твердая": "MemoryMed",
+    "Paměťová pěna Твердая": "MemoryHard",
+    "Pur Pena Мягкая": "PurSoft",
+    "Pur Pena Средне-твердая": "PurMed",
+    "Pur Pena Твердая": "PurHard",
+    "Studená pěna Мягкая": "ColdSoft",
+    "Studená pěna Средне-твердая": "ColdMed",
+    "Studená pěna Твердая": "ColdHard",
+    "Пружина": "Spring",
+    "Пружина-кокос": "SpringCoco",
+    "Пружина-хлопковая": "SpringCotton",
+    "Пружина-хлопковая-кокос": "SpringCottonCoco"
+  },
+  "covers": {
+    "cotton": "Cotton",
+    "linen": "Linen"
+  }
+}

@@ -129,10 +129,94 @@ const OptionGroup = ({ title, options, name, selectedId, onChange, columnsDeskto
   );
 };
 
+/** ---------- URL функции ---------- */
+
+// Генерация URL строки из текущего состояния
+const generateUrlParams = (size, height, options, visibleKeys, urlMapping) => {
+  if (!urlMapping) return '';
+
+  const parts = [size, `${height}cm`];
+
+  // Добавляем видимые слои
+  for (const key of visibleKeys) {
+    const id = options[key];
+    const urlKey = urlMapping.layers[id] || id;
+    parts.push(urlKey);
+  }
+
+  // Добавляем чехол
+  const coverId = options['potah'];
+  const coverUrlKey = urlMapping.covers[coverId] || coverId;
+  parts.push(coverUrlKey);
+
+  return parts.join('-');
+};
+
+// Парсинг URL параметров
+const parseUrlParams = (search, urlMapping) => {
+  if (!urlMapping) return null;
+
+  const params = new URLSearchParams(search);
+  const config = params.get('config');
+
+  if (!config) return null;
+
+  const parts = config.split('-');
+  if (parts.length < 3) return null;
+
+  // Извлекаем размер
+  const size = parts[0];
+  if (!SIZES.includes(size)) return null;
+
+  // Извлекаем высоту
+  const heightStr = parts[1];
+  const height = parseInt(heightStr.replace('cm', ''));
+  if (!HEIGHTS.includes(height)) return null;
+
+  // Создаем обратный маппинг
+  const reverseMapping = {
+    layers: {},
+    covers: {}
+  };
+
+  Object.entries(urlMapping.layers).forEach(([key, value]) => {
+    reverseMapping.layers[value] = key;
+  });
+
+  Object.entries(urlMapping.covers).forEach(([key, value]) => {
+    reverseMapping.covers[value] = key;
+  });
+
+  // Определяем количество слоев по высоте
+  const visibleKeys = visibleLayerKeys[height];
+  const expectedParts = 2 + visibleKeys.length + 1; // размер + высота + слои + чехол
+
+  if (parts.length !== expectedParts) return null;
+
+  // Извлекаем слои
+  const options = {};
+  let partIndex = 2;
+
+  for (const key of visibleKeys) {
+    const urlKey = parts[partIndex];
+    const id = reverseMapping.layers[urlKey] || urlKey;
+    options[key] = id;
+    partIndex++;
+  }
+
+  // Извлекаем чехол
+  const coverUrlKey = parts[partIndex];
+  const coverId = reverseMapping.covers[coverUrlKey] || coverUrlKey;
+  options['potah'] = coverId;
+
+  return { size, height, options };
+};
+
 /** ---------- Основной компонент ---------- */
 
 const App = () => {
   const [configData, setConfigData] = useState(null);
+  const [urlMapping, setUrlMapping] = useState(null);
   const [selectedOptions, setSelectedOptions] = useState({
     'sloj-odin': null,
     'sloj-dva': null,
@@ -143,6 +227,7 @@ const App = () => {
   const [selectedHeight, setSelectedHeight] = useState(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [urlInitialized, setUrlInitialized] = useState(false);
 
   const isMobile = useIsMobile();
   const [showPinnedMattress, setShowPinnedMattress] = useState(true);
@@ -163,18 +248,57 @@ const App = () => {
     const load = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/data/layers-config.json');
-        if (!res.ok) throw new Error('Failed to load configuration');
-        const data = await res.json();
+
+        // Загружаем оба файла параллельно
+        const [configRes, mappingRes] = await Promise.all([
+          fetch('/data/layers-config.json'),
+          fetch('/data/url-mapping.json')
+        ]);
+
+        if (!configRes.ok || !mappingRes.ok) {
+          throw new Error('Failed to load configuration');
+        }
+
+        const [data, mapping] = await Promise.all([
+          configRes.json(),
+          mappingRes.json()
+        ]);
+
         if (cancelled) return;
 
         setConfigData(data);
-        setSelectedOptions({
-          'sloj-odin': data.mattressLayers[0]?.id || null,
-          'sloj-dva': data.mattressLayers[0]?.id || null,
-          'sloj-tri': data.mattressLayers[0]?.id || null,
-          'potah': data.covers[0]?.id || null,
-        });
+        setUrlMapping(mapping);
+
+        // Проверяем URL параметры
+        const urlConfig = parseUrlParams(window.location.search, mapping);
+
+        if (urlConfig && data) {
+          // Проверяем, что все ID существуют в конфигурации
+          const isValidConfig =
+            data.mattressLayers.some(l => l.id === urlConfig.options['sloj-odin']) &&
+            (!urlConfig.options['sloj-dva'] || data.mattressLayers.some(l => l.id === urlConfig.options['sloj-dva'])) &&
+            (!urlConfig.options['sloj-tri'] || data.mattressLayers.some(l => l.id === urlConfig.options['sloj-tri'])) &&
+            data.covers.some(c => c.id === urlConfig.options['potah']);
+
+          if (isValidConfig) {
+            setSelectedSize(urlConfig.size);
+            setSelectedHeight(urlConfig.height);
+            setSelectedOptions({
+              'sloj-odin': urlConfig.options['sloj-odin'] || data.mattressLayers[0]?.id || null,
+              'sloj-dva': urlConfig.options['sloj-dva'] || data.mattressLayers[0]?.id || null,
+              'sloj-tri': urlConfig.options['sloj-tri'] || data.mattressLayers[0]?.id || null,
+              'potah': urlConfig.options['potah'] || data.covers[0]?.id || null,
+            });
+          } else {
+            // Используем значения по умолчанию
+            setDefaultValues(data);
+          }
+        } else {
+          // Используем значения по умолчанию
+          setDefaultValues(data);
+        }
+
+        setUrlInitialized(true);
         setLoading(false);
       } catch (e) {
         if (!cancelled) {
@@ -183,9 +307,31 @@ const App = () => {
         }
       }
     };
+
+    const setDefaultValues = (data) => {
+      setSelectedOptions({
+        'sloj-odin': data.mattressLayers[0]?.id || null,
+        'sloj-dva': data.mattressLayers[0]?.id || null,
+        'sloj-tri': data.mattressLayers[0]?.id || null,
+        'potah': data.covers[0]?.id || null,
+      });
+    };
+
     load();
     return () => { cancelled = true; };
   }, []);
+
+  // Обновление URL при изменении параметров
+  useEffect(() => {
+    if (!urlInitialized || !configData || !urlMapping) return;
+
+    const visibleKeys = visibleLayerKeys[selectedHeight];
+    const urlParams = generateUrlParams(selectedSize, selectedHeight, selectedOptions, visibleKeys, urlMapping);
+    const newUrl = `${window.location.pathname}?config=${urlParams}`;
+
+    // Обновляем URL без перезагрузки страницы
+    window.history.replaceState({}, '', newUrl);
+  }, [selectedSize, selectedHeight, selectedOptions, urlInitialized, configData, urlMapping]);
 
   // Получение данных выбранного элемента (мемо)
   const getSelectedItemData = useCallback((layerKey, itemId) => {
