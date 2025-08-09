@@ -132,7 +132,7 @@ const OptionGroup = ({ title, options, name, selectedId, onChange, columnsDeskto
 /** ---------- URL функции ---------- */
 
 // Генерация URL строки из текущего состояния
-const generateUrlParams = (size, height, options, visibleKeys, urlMapping) => {
+const generateUrlPath = (size, height, options, visibleKeys, urlMapping) => {
   if (!urlMapping) return '';
 
   const parts = [size, `${height}cm`];
@@ -153,13 +153,14 @@ const generateUrlParams = (size, height, options, visibleKeys, urlMapping) => {
 };
 
 // Парсинг URL параметров
-const parseUrlParams = (search, urlMapping) => {
+const parseUrlPath = (pathname, urlMapping) => {
   if (!urlMapping) return null;
 
-  const params = new URLSearchParams(search);
-  const config = params.get('config');
+  // Получаем последнюю часть пути (после последнего /)
+  const pathParts = pathname.split('/');
+  const config = pathParts[pathParts.length - 1];
 
-  if (!config) return null;
+  if (!config || config === '') return null;
 
   const parts = config.split('-');
   if (parts.length < 3) return null;
@@ -270,7 +271,7 @@ const App = () => {
         setUrlMapping(mapping);
 
         // Проверяем URL параметры
-        const urlConfig = parseUrlParams(window.location.search, mapping);
+        const urlConfig = parseUrlPath(window.location.pathname, mapping);
 
         if (urlConfig && data) {
           // Проверяем, что все ID существуют в конфигурации
@@ -326,8 +327,25 @@ const App = () => {
     if (!urlInitialized || !configData || !urlMapping) return;
 
     const visibleKeys = visibleLayerKeys[selectedHeight];
-    const urlParams = generateUrlParams(selectedSize, selectedHeight, selectedOptions, visibleKeys, urlMapping);
-    const newUrl = `${window.location.pathname}?config=${urlParams}`;
+    const urlPath = generateUrlPath(selectedSize, selectedHeight, selectedOptions, visibleKeys, urlMapping);
+
+    // Получаем базовый путь (убираем текущую конфигурацию если она есть)
+    const pathParts = window.location.pathname.split('/');
+    const lastPart = pathParts[pathParts.length - 1];
+
+    // Проверяем, является ли последняя часть конфигурацией (содержит размер и см)
+    const isConfig = lastPart && lastPart.includes('x') && lastPart.includes('cm');
+
+    let basePath;
+    if (isConfig) {
+      // Убираем последнюю часть
+      basePath = pathParts.slice(0, -1).join('/') || '/';
+    } else {
+      basePath = window.location.pathname;
+    }
+
+    // Добавляем слэш если нужно
+    const newUrl = basePath.endsWith('/') ? basePath + urlPath : basePath + '/' + urlPath;
 
     // Обновляем URL без перезагрузки страницы
     window.history.replaceState({}, '', newUrl);
