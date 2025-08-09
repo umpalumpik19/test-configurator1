@@ -1,0 +1,129 @@
+/* Глобальные стили */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'tildasans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #1a1a1a;
+}
+
+/* Дополнительные стили для компонентов */
+.mattress-configurator {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Скроллбар */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #212121;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #9AEBC6;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #7bc9a4;
+}
+
+/* Анимация при наведении */
+.image-radio-content:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(154, 235, 198, 0.2);
+}
+
+.add-to-cart-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.add-to-cart-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(154, 235, 198, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.add-to-cart-btn:hover::before {
+  left: 100%;
+}
+
+/* Пульсация цены */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.price-value {
+  animation: pulse 2s infinite;
+}
+
+/* Медиа-запросы для планшетов */
+@media (max-width: 1024px) and (min-width: 641px) {
+  .configurator-wrapper {
+    padding: 0 20px;
+  }
+
+  .image-radio-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .mattress-visualization {
+    height: 400px;
+  }
+}
+
+/* Дополнительные стили для мобильных */
+@media (max-width: 640px) {
+  .option-group {
+    padding: 0 10px;
+  }
+
+  .image-placeholder {
+    width: 32px;
+    height: 32px;
+  }
+
+  .option-text {
+    font-size: 10px;
+  }
+
+  .price-breakdown {
+    font-size: 12px;
+  }
+
+  .price-breakdown td {
+    padding: 6px 0;
+  }
+}
