@@ -1,3 +1,4 @@
+/* /src/App.css */
 /* База */
 :root{
   --bg: #0e0e0f;
@@ -14,13 +15,14 @@
   /* Высота закреплённого матраса на мобилке */
   --pinned-h: 220px;
 
-  /* Глобальная, единая высота кнопок (выставляется из App через инлайн-CSS) */
+  /* Глобальная высота карточек (из App ставится инлайном) */
   --global-card-min-height: 56px;
 }
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; background: var(--bg); }
 body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Arial, sans-serif; color: var(--text); }
+html, body { overflow-x: hidden; } /* Никогда не допускаем горизонтальный скролл страницы */
 
 .app-root { min-height: 100%; padding-bottom: 64px; } /* место под bottom-bar */
 
@@ -67,9 +69,11 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
   grid-template-areas:
     "visual sidebar"
     "controls sidebar"
-    "selectors sidebar";
+    "selectors sidebar"
+    "details sidebar";
   gap: var(--gap);
   position: relative;
+  min-width: 0; /* чтобы дети могли сжиматься и не плодили горизонтальную прокрутку */
 }
 
 /* Визуализация (десктоп) */
@@ -78,14 +82,14 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .layer-frame{ z-index: 100; }
 
 /* Контролы размера/высоты */
-.controls{ grid-area: controls; display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+.controls{ grid-area: controls; display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); min-width: 0; }
 .control-group{ background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--padded); }
 .control-title{ margin: 0 0 12px; font-weight: 600; font-size: 16px; color: var(--text); }
 .control-options{ display: grid; gap: 10px; }
 .size-options{ grid-template-columns: repeat(5, minmax(0,1fr)); }
 .height-options{ grid-auto-flow: column; grid-auto-columns: minmax(84px, 1fr); }
 
-.control-item{ position: relative; display: block; }
+.control-item{ position: relative; display: block; min-width: 0; }
 .control-item input{ position: absolute; opacity: 0; pointer-events: none; }
 .control-box{
   user-select: none;
@@ -111,7 +115,35 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
   display: grid;
   grid-template-columns: repeat(4, minmax(0,1fr));
   gap: var(--gap);
+  min-width: 0;
 }
+
+/* Блоки описаний */
+.details{
+  grid-area: details;
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* разделитель рисуем линией */
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.detail-block{ display: block; }
+.detail-card{
+  display: grid;
+  grid-template-columns: 240px 1fr; /* десктоп: изображение слева */
+  gap: 16px;
+  align-items: center;
+  padding: 16px;
+}
+.detail-image-wrap{ display: flex; align-items: center; justify-content: center; }
+.detail-image{ width: 100%; max-width: 220px; height: auto; object-fit: contain; border-radius: 4px; }
+.detail-content{ min-width: 0; }
+.detail-title{ margin: 0 0 6px; font-size: 16px; font-weight: 700; color: var(--text); }
+.detail-text{ margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.detail-divider{ height: 1px; background: var(--line); margin: 0 16px; }
 
 /* Группа опций */
 .layer-selector{
@@ -121,7 +153,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
   padding: var(--padded);
   display: flex;
   flex-direction: column;
-  min-width: 0; /* Важно для правильного сжатия */
+  min-width: 0;
 }
 .layer-title{
   margin: 0 0 14px;
@@ -135,13 +167,13 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .layer-options{
   display: grid;
   gap: 8px;
-  /* Колонки задаются в инлайне из компонента */
+  /* Колонки задаются инлайном из компонента */
 }
 
-.layer-option{ position: relative; }
+.layer-option{ position: relative; min-width: 0; }
 .layer-option input{ position: absolute; opacity: 0; pointer-events: none; }
 
-/* Карточка опции: ОДНА ЕДИНАЯ высота на всё приложение */
+/* Карточка опции: единая высота для всех */
 .option-card{
   display: flex;
   flex-direction: column;
@@ -162,7 +194,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 }
 .layer-option:active .option-card{ transform: scale(.985); }
 
-/* Картинки одинакового размера и стартовой высоты */
+/* Картинки одинакового размера */
 .option-image{
   width: 40px;
   height: 40px;
@@ -178,21 +210,18 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
   flex-shrink: 0;
 }
 
-/* Текст с улучшенной адаптивностью */
+/* Текст: переносы только по словам (НЕ по буквам) */
 .option-name{
   font-size: 10px;
-  line-height: 1.15;
+  line-height: 1.2;
   text-align: center;
   color: var(--muted);
   white-space: normal;
-  word-break: break-word;
-  overflow-wrap: break-word;
+  word-break: normal;         /* не ломаем по буквам */
+  overflow-wrap: break-word;  /* переносим только длинные слова */
+  hyphens: manual;            /* переносы только ручные */
   max-width: 100%;
   width: 100%;
-  hyphens: auto;
-  -webkit-hyphens: auto;
-  -moz-hyphens: auto;
-  -ms-hyphens: auto;
 }
 
 /* Боковая панель с калькулятором - sticky на десктопе */
@@ -298,122 +327,77 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .bb-btn:hover{ border-color: var(--accent); }
 .bb-btn.secondary{ opacity: .95; }
 
-/* ---------- Адаптив ---------- */
+/* ---------- Адаптив: раньше переходим в компакт ---------- */
 
-@media (max-width: 1200px){
+/* Шаг 1: крупные ноутбуки */
+@media (max-width: 1366px){
   .layout{
     grid-template-columns: 1fr 300px;
     gap: 20px;
   }
-
-  /* При уменьшении экрана делаем кнопки адаптивными */
   .selectors{
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
 }
 
-@media (max-width: 992px){
+/* Шаг 2: планшеты — одна колонка контента + сайдбар вниз */
+@media (max-width: 1100px){
   .layout{
     grid-template-columns: 1fr;
     grid-template-areas:
       "visual"
       "controls"
       "selectors"
-      "sidebar";
+      "sidebar"
+      "details";
   }
-  .visual .layers-canvas{ height: 320px; }
-
-  /* На планшетах отменяем sticky для калькулятора */
-  .sidebar{
-    position: static;
-    max-height: none;
-  }
-
-  /* Секции с кнопками становятся более адаптивными */
-  .selectors{
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  }
+  .visual .layers-canvas{ height: 360px; }
+  .sidebar{ position: static; max-height: none; }
+  .selectors{ grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 }
 
-@media (max-width: 768px){
+/* Шаг 3: мобильный — включаем фиксированный матрас, секции в одну колонку */
+@media (max-width: 1024px){
   :root{ --pinned-h: 200px; }
 
   .layout{ padding: 16px; gap: 16px; }
-  .visual{ display: none; } /* на мобилке используется фиксированная визуализация */
+  .visual{ display: none; } /* используется закреплённая визуализация */
   .controls{ grid-template-columns: 1fr; }
 
-  /* Размеры - адаптивная сетка */
-  .size-options{
-    grid-template-columns: repeat(auto-fill, minmax(55px, 1fr));
-  }
-  .control-box{
-    font-size: 11px;
-    min-height: 42px;
-    padding: 6px 8px;
-  }
+  .size-options{ grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+  .control-box{ font-size: 12px; min-height: 44px; padding: 6px 8px; }
 
-  .height-options{
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(60px, 1fr);
-  }
+  .height-options{ grid-auto-flow: column; grid-auto-columns: minmax(70px, 1fr); }
 
-  /* Секции с кнопками — по одной колонке секций */
-  .selectors{
-    grid-template-columns: 1fr;
-  }
+  .selectors{ grid-template-columns: 1fr; }
+  .layer-options{ gap: 8px; }
+  .option-image, .image-placeholder{ width: 36px; height: 36px; }
+  .option-name{ font-size: 10px; }
 
-  /* Внутри секции — адаптивные колонки */
-  .layer-options{
-    gap: 6px;
-  }
-  .option-image, .image-placeholder{
-    width: 32px;
-    height: 32px;
-  }
-  .option-name{
-    font-size: 9px;
-  }
+  .sidebar{ order: 10; }
 
-  /* Калькулятор опускаем в самый низ страницы (но остаётся в потоке) */
-  .sidebar{
-    order: 10;
-  }
+  .bottom-bar{ padding: 8px 12px; }
+  .bb-btn{ min-width: 120px; padding: 8px 10px; font-size: 13px; }
 
-  /* Улучшенная адаптивность bottom-bar */
-  .bottom-bar{
-    padding: 8px 12px;
-  }
-  .bb-btn{
-    min-width: 120px;
-    padding: 8px 10px;
-    font-size: 13px;
-  }
+  /* Мобильный формат блоков описаний: картинка сверху */
+  .detail-card{ grid-template-columns: 1fr; }
+  .detail-image{ max-width: 100%; }
 }
 
 /* Очень маленькие экраны */
-@media (max-width: 480px){
-  .size-options{
-    grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
-  }
-  .control-box{
-    font-size: 10px;
-    min-height: 38px;
-    padding: 4px 6px;
-  }
+@media (max-width: 600px){
+  .size-options{ grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
+  .control-box{ font-size: 11px; min-height: 40px; padding: 4px 6px; }
 
-  .option-image, .image-placeholder{
-    width: 28px;
-    height: 28px;
-  }
-  .option-name{
-    font-size: 8px;
-  }
+  .option-image, .image-placeholder{ width: 32px; height: 32px; }
+  .option-name{ font-size: 9px; }
 
-  .price-value{
-    font-size: 24px;
-  }
+  .price-value{ font-size: 24px; }
+  .bb-value{ font-size: 18px; }
+}
 
-  .bb-value{
-    font-size: 18px;
-  }
+@media (max-width: 420px){
+  .size-options{ grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); }
+  .option-image, .image-placeholder{ width: 28px; height: 28px; }
+  .option-name{ font-size: 8.5px; }
 }

@@ -1,15 +1,31 @@
-import React, { useEffect, useMemo, useRef, useState, useLayoutEffect, useCallback } from 'react';
+// /src/App.js
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useLayoutEffect,
+  useCallback,
+} from 'react';
 import './App.css';
 
 /** ---------- Константы и утилиты ---------- */
 
 const SIZES = [
-  '80x190','85x195','80x200','90x200','100x200',
-  '120x200','140x200','160x200','180x200','200x200'
+  '80x190',
+  '85x195',
+  '80x200',
+  '90x200',
+  '100x200',
+  '120x200',
+  '140x200',
+  '160x200',
+  '180x200',
+  '200x200',
 ];
 const HEIGHTS = [10, 20, 30]; // см
 
-const sizeKind = s => +s.split('x')[0] >= 160 ? 'double' : 'single';
+const sizeKind = (s) => (+s.split('x')[0] >= 160 ? 'double' : 'single');
 const visibleLayerKeys = {
   10: ['sloj-odin'],
   20: ['sloj-odin', 'sloj-dva'],
@@ -20,11 +36,14 @@ const LAYER_TITLES = {
   'sloj-odin': 'Слой 1',
   'sloj-dva': 'Слой 2',
   'sloj-tri': 'Слой 3',
-  'potah': 'Чехол',
+  potah: 'Чехол',
 };
 
-const useIsMobile = (bp = 768) => {
-  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= bp : false));
+/** Ранний mobile-режим — с 1024px */
+const useIsMobile = (bp = 1024) => {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth <= bp : false,
+  );
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= bp);
     window.addEventListener('resize', onResize);
@@ -40,7 +59,7 @@ const formatLabel = (s) => {
   return parts.map((p, i) => (
     <React.Fragment key={i}>
       {p.trim()}
-      {i < parts.length - 1 ? <br/> : null}
+      {i < parts.length - 1 ? <br /> : null}
     </React.Fragment>
   ));
 };
@@ -48,31 +67,47 @@ const formatLabel = (s) => {
 /** Определение оптимального количества колонок для опций */
 const getOptimalColumns = (containerWidth, isMobile, baseColumns) => {
   if (isMobile) {
-    // На мобильных устройствах
-    if (containerWidth < 320) return 4;
-    if (containerWidth < 375) return 5;
-    if (containerWidth < 480) return 5;
-    return 5;
-  } else {
-    // На десктопе
-    if (containerWidth < 200) return 2;
-    if (containerWidth < 250) return 3;
-    return baseColumns;
+    // На моб./планшетах делаем шире карточки, уменьшая кол-во колонок
+    if (containerWidth < 360) return 3;
+    if (containerWidth < 520) return 4;
+    return 4;
   }
+  // Десктоп
+  if (containerWidth < 240) return 2;
+  if (containerWidth < 300) return 3;
+  return baseColumns;
 };
 
 /** Группа опций */
-const OptionGroup = ({ title, options, name, selectedId, onChange, columnsDesktop = 3, columnsMobile = 5 }) => {
+const OptionGroup = ({
+  title,
+  options,
+  name,
+  selectedId,
+  onChange,
+  columnsDesktop = 3,
+  columnsMobile = 4,
+  onLayoutChange,
+}) => {
   const isMobile = useIsMobile();
   const containerRef = useRef(null);
-  const [actualColumns, setActualColumns] = useState(isMobile ? columnsMobile : columnsDesktop);
+  const [actualColumns, setActualColumns] = useState(
+    isMobile ? columnsMobile : columnsDesktop,
+  );
 
   useEffect(() => {
     const updateColumns = () => {
       if (containerRef.current) {
         const width = containerRef.current.offsetWidth;
         const cols = getOptimalColumns(width, isMobile, columnsDesktop);
-        setActualColumns(cols);
+        setActualColumns((prev) => {
+          if (prev !== cols) {
+            if (typeof onLayoutChange === 'function') {
+              requestAnimationFrame(() => onLayoutChange());
+            }
+          }
+          return cols;
+        });
       }
     };
 
@@ -88,7 +123,7 @@ const OptionGroup = ({ title, options, name, selectedId, onChange, columnsDeskto
       window.removeEventListener('resize', updateColumns);
       resizeObserver.disconnect();
     };
-  }, [isMobile, columnsDesktop]);
+  }, [isMobile, columnsDesktop, onLayoutChange]);
 
   return (
     <section className="layer-selector" ref={containerRef}>
@@ -116,9 +151,13 @@ const OptionGroup = ({ title, options, name, selectedId, onChange, columnsDeskto
                     src={img}
                     alt={opt.name}
                     className="option-image"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
-                ) : <div className="image-placeholder" aria-hidden="true"/>}
+                ) : (
+                  <div className="image-placeholder" aria-hidden="true" />
+                )}
                 <span className="option-name">{formatLabel(opt.name)}</span>
               </div>
             </label>
@@ -131,20 +170,23 @@ const OptionGroup = ({ title, options, name, selectedId, onChange, columnsDeskto
 
 /** ---------- URL функции ---------- */
 
-// Генерация URL строки из текущего состояния
-const generateUrlPath = (size, height, options, visibleKeys, urlMapping) => {
+const generateUrlPath = (
+  size,
+  height,
+  options,
+  visibleKeys,
+  urlMapping,
+) => {
   if (!urlMapping) return '';
 
   const parts = [size, `${height}cm`];
 
-  // Добавляем видимые слои
   for (const key of visibleKeys) {
     const id = options[key];
     const urlKey = urlMapping.layers[id] || id;
     parts.push(urlKey);
   }
 
-  // Добавляем чехол
   const coverId = options['potah'];
   const coverUrlKey = urlMapping.covers[coverId] || coverId;
   parts.push(coverUrlKey);
@@ -152,60 +194,44 @@ const generateUrlPath = (size, height, options, visibleKeys, urlMapping) => {
   return parts.join('-');
 };
 
-// Парсинг URL параметров
 const parseUrlPath = (pathname, urlMapping) => {
   if (!urlMapping) return null;
 
-  // Получаем последнюю часть пути (после последнего /)
   const pathParts = pathname.split('/');
   const config = pathParts[pathParts.length - 1];
-
   if (!config || config === '') return null;
 
   const parts = config.split('-');
   if (parts.length < 3) return null;
 
-  // Извлекаем размер
   const size = parts[0];
   if (!SIZES.includes(size)) return null;
 
-  // Извлекаем высоту
   const heightStr = parts[1];
   const height = parseInt(heightStr.replace('cm', ''));
   if (!HEIGHTS.includes(height)) return null;
 
-  // Создаем обратный маппинг
-  const reverseMapping = {
-    layers: {},
-    covers: {}
-  };
-
+  const reverseMapping = { layers: {}, covers: {} };
   Object.entries(urlMapping.layers).forEach(([key, value]) => {
     reverseMapping.layers[value] = key;
   });
-
   Object.entries(urlMapping.covers).forEach(([key, value]) => {
     reverseMapping.covers[value] = key;
   });
 
-  // Определяем количество слоев по высоте
-  const visibleKeys = visibleLayerKeys[height];
-  const expectedParts = 2 + visibleKeys.length + 1; // размер + высота + слои + чехол
-
+  const vKeys = visibleLayerKeys[height];
+  const expectedParts = 2 + vKeys.length + 1;
   if (parts.length !== expectedParts) return null;
 
-  // Извлекаем слои
   const options = {};
   let partIndex = 2;
-
-  for (const key of visibleKeys) {
+  for (const key of vKeys) {
     const urlKey = parts[partIndex];
     const id = reverseMapping.layers[urlKey] || urlKey;
     options[key] = id;
     partIndex++;
   }
 
-  // Извлекаем чехол
   const coverUrlKey = parts[partIndex];
   const coverId = reverseMapping.covers[coverUrlKey] || coverUrlKey;
   options['potah'] = coverId;
@@ -217,12 +243,13 @@ const parseUrlPath = (pathname, urlMapping) => {
 
 const App = () => {
   const [configData, setConfigData] = useState(null);
+  const [layerDescriptions, setLayerDescriptions] = useState(null);
   const [urlMapping, setUrlMapping] = useState(null);
   const [selectedOptions, setSelectedOptions] = useState({
     'sloj-odin': null,
     'sloj-dva': null,
     'sloj-tri': null,
-    'potah': null,
+    potah: null,
   });
   const [selectedSize, setSelectedSize] = useState(SIZES[0]);
   const [selectedHeight, setSelectedHeight] = useState(30);
@@ -235,68 +262,89 @@ const App = () => {
   const priceCalcRef = useRef(null);
   const selectorsTopRef = useRef(null);
   const appRootRef = useRef(null);
+  const recalcRafId = useRef(null);
 
-  // Глобальная, единая высота карточек по всей странице
+  // Глобальная, единая высота карточек
   const [globalCardHeight, setGlobalCardHeight] = useState(56);
 
   useEffect(() => {
     setShowPinnedMattress(isMobile);
   }, [isMobile]);
 
-  // Загрузка конфигурации
+  // Загрузка конфигурации + url-mapping
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
         setLoading(true);
-
-        // Загружаем оба файла параллельно
-        const [configRes, mappingRes] = await Promise.all([
+        const [configRes, mappingRes, descRes] = await Promise.all([
           fetch('/data/layers-config.json'),
-          fetch('/data/url-mapping.json')
+          fetch('/data/url-mapping.json'),
+          fetch('/data/layer-descriptions.json'),
         ]);
-
-        if (!configRes.ok || !mappingRes.ok) {
+        if (!configRes.ok || !mappingRes.ok || !descRes.ok)
           throw new Error('Failed to load configuration');
-        }
 
-        const [data, mapping] = await Promise.all([
+        const [data, mapping, descriptions] = await Promise.all([
           configRes.json(),
-          mappingRes.json()
+          mappingRes.json(),
+          descRes.json(),
         ]);
-
         if (cancelled) return;
 
         setConfigData(data);
         setUrlMapping(mapping);
+        setLayerDescriptions(descriptions);
 
-        // Проверяем URL параметры
         const urlConfig = parseUrlPath(window.location.pathname, mapping);
+        const setDefaults = () => {
+          setSelectedOptions({
+            'sloj-odin': data.mattressLayers[0]?.id || null,
+            'sloj-dva': data.mattressLayers[0]?.id || null,
+            'sloj-tri': data.mattressLayers[0]?.id || null,
+            potah: data.covers[0]?.id || null,
+          });
+        };
 
         if (urlConfig && data) {
-          // Проверяем, что все ID существуют в конфигурации
           const isValidConfig =
-            data.mattressLayers.some(l => l.id === urlConfig.options['sloj-odin']) &&
-            (!urlConfig.options['sloj-dva'] || data.mattressLayers.some(l => l.id === urlConfig.options['sloj-dva'])) &&
-            (!urlConfig.options['sloj-tri'] || data.mattressLayers.some(l => l.id === urlConfig.options['sloj-tri'])) &&
-            data.covers.some(c => c.id === urlConfig.options['potah']);
+            data.mattressLayers.some(
+              (l) => l.id === urlConfig.options['sloj-odin'],
+            ) &&
+            (!urlConfig.options['sloj-dva'] ||
+              data.mattressLayers.some(
+                (l) => l.id === urlConfig.options['sloj-dva'],
+              )) &&
+            (!urlConfig.options['sloj-tri'] ||
+              data.mattressLayers.some(
+                (l) => l.id === urlConfig.options['sloj-tri'],
+              )) &&
+            data.covers.some((c) => c.id === urlConfig.options['potah']);
 
           if (isValidConfig) {
             setSelectedSize(urlConfig.size);
             setSelectedHeight(urlConfig.height);
             setSelectedOptions({
-              'sloj-odin': urlConfig.options['sloj-odin'] || data.mattressLayers[0]?.id || null,
-              'sloj-dva': urlConfig.options['sloj-dva'] || data.mattressLayers[0]?.id || null,
-              'sloj-tri': urlConfig.options['sloj-tri'] || data.mattressLayers[0]?.id || null,
-              'potah': urlConfig.options['potah'] || data.covers[0]?.id || null,
+              'sloj-odin':
+                urlConfig.options['sloj-odin'] ||
+                data.mattressLayers[0]?.id ||
+                null,
+              'sloj-dva':
+                urlConfig.options['sloj-dva'] ||
+                data.mattressLayers[0]?.id ||
+                null,
+              'sloj-tri':
+                urlConfig.options['sloj-tri'] ||
+                data.mattressLayers[0]?.id ||
+                null,
+              potah:
+                urlConfig.options['potah'] || data.covers[0]?.id || null,
             });
           } else {
-            // Используем значения по умолчанию
-            setDefaultValues(data);
+            setDefaults();
           }
         } else {
-          // Используем значения по умолчанию
-          setDefaultValues(data);
+          setDefaults();
         }
 
         setUrlInitialized(true);
@@ -309,61 +357,67 @@ const App = () => {
       }
     };
 
-    const setDefaultValues = (data) => {
-      setSelectedOptions({
-        'sloj-odin': data.mattressLayers[0]?.id || null,
-        'sloj-dva': data.mattressLayers[0]?.id || null,
-        'sloj-tri': data.mattressLayers[0]?.id || null,
-        'potah': data.covers[0]?.id || null,
-      });
-    };
-
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Обновление URL при изменении параметров
   useEffect(() => {
     if (!urlInitialized || !configData || !urlMapping) return;
 
-    const visibleKeys = visibleLayerKeys[selectedHeight];
-    const urlPath = generateUrlPath(selectedSize, selectedHeight, selectedOptions, visibleKeys, urlMapping);
+    const vKeys = visibleLayerKeys[selectedHeight];
+    const urlPath = generateUrlPath(
+      selectedSize,
+      selectedHeight,
+      selectedOptions,
+      vKeys,
+      urlMapping,
+    );
 
-    // Получаем базовый путь (убираем текущую конфигурацию если она есть)
     const pathParts = window.location.pathname.split('/');
     const lastPart = pathParts[pathParts.length - 1];
-
-    // Проверяем, является ли последняя часть конфигурацией (содержит размер и см)
     const isConfig = lastPart && lastPart.includes('x') && lastPart.includes('cm');
 
-    let basePath;
-    if (isConfig) {
-      // Убираем последнюю часть
-      basePath = pathParts.slice(0, -1).join('/') || '/';
-    } else {
-      basePath = window.location.pathname;
-    }
+    const basePath = isConfig
+      ? pathParts.slice(0, -1).join('/') || '/'
+      : window.location.pathname;
 
-    // Добавляем слэш если нужно
-    const newUrl = basePath.endsWith('/') ? basePath + urlPath : basePath + '/' + urlPath;
+    const newUrl = basePath.endsWith('/')
+      ? basePath + urlPath
+      : basePath + '/' + urlPath;
 
-    // Обновляем URL без перезагрузки страницы
     window.history.replaceState({}, '', newUrl);
-  }, [selectedSize, selectedHeight, selectedOptions, urlInitialized, configData, urlMapping]);
+  }, [
+    selectedSize,
+    selectedHeight,
+    selectedOptions,
+    urlInitialized,
+    configData,
+    urlMapping,
+  ]);
 
-  // Получение данных выбранного элемента (мемо)
-  const getSelectedItemData = useCallback((layerKey, itemId) => {
-    if (!configData) return null;
-    if (layerKey === 'potah') return configData.covers.find(c => c.id === itemId) || null;
-    return configData.mattressLayers.find(l => l.id === itemId) || null;
-  }, [configData]);
+  // Данные выбранного элемента
+  const getSelectedItemData = useCallback(
+    (layerKey, itemId) => {
+      if (!configData) return null;
+      if (layerKey === 'potah')
+        return configData.covers.find((c) => c.id === itemId) || null;
+      return (
+        configData.mattressLayers.find((l) => l.id === itemId) || null
+      );
+    },
+    [configData],
+  );
 
-  /** Стабильный пересчёт: берём высоту ТЕКСТА и добавляем «базу» (картинка + отступы) */
+  /** Стабильный пересчёт общей min-height карточек */
   const recalcGlobalCardHeight = () => {
-    const nameEls = Array.from(document.querySelectorAll('.option-card .option-name'));
+    const nameEls = Array.from(
+      document.querySelectorAll('.option-card .option-name'),
+    );
     if (!nameEls.length) return;
 
-    // Определяем размеры элементов в зависимости от ширины экрана
     const screenWidth = window.innerWidth;
     let imageH, gap, paddingTopBottom, border;
 
@@ -372,7 +426,7 @@ const App = () => {
       gap = 6;
       paddingTopBottom = 12;
       border = 4;
-    } else if (screenWidth <= 768) {
+    } else if (screenWidth <= 1024) {
       imageH = 32;
       gap = 6;
       paddingTopBottom = 12;
@@ -387,7 +441,7 @@ const App = () => {
     const base = imageH + gap + paddingTopBottom + border;
 
     let maxText = 0;
-    nameEls.forEach(el => {
+    nameEls.forEach((el) => {
       maxText = Math.max(maxText, el.scrollHeight);
     });
 
@@ -395,35 +449,50 @@ const App = () => {
     setGlobalCardHeight(next);
   };
 
-  // Пересчёт при изменениях
-  useLayoutEffect(() => {
-    recalcGlobalCardHeight();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [configData, selectedOptions, selectedHeight, isMobile]);
+  // Планировщик пересчёта на следующий кадр — устойчив к zoom/перестройке сетки
+  const scheduleRecalc = useCallback(() => {
+    if (recalcRafId.current) cancelAnimationFrame(recalcRafId.current);
+    recalcRafId.current = requestAnimationFrame(() => {
+      recalcRafId.current = null;
+      recalcGlobalCardHeight();
+    });
+  }, []);
 
-  // Ресайз/полная загрузка, догрузка картинок и изменение размеров контейнера
+  useLayoutEffect(() => {
+    scheduleRecalc();
+  }, [configData, selectedOptions, selectedHeight, isMobile, scheduleRecalc]);
+
+  // Ресайз/загрузка/догрузка картинок + изменения контейнера
   useEffect(() => {
-    const onResizeOrLoad = () => recalcGlobalCardHeight();
+    const onResizeOrLoad = () => scheduleRecalc();
     window.addEventListener('resize', onResizeOrLoad);
     window.addEventListener('load', onResizeOrLoad);
 
     const imgs = Array.from(document.querySelectorAll('.option-image'));
-    imgs.forEach(img => img.addEventListener('load', onResizeOrLoad));
+    imgs.forEach((img) => img.addEventListener('load', onResizeOrLoad));
 
-    const ro = new ResizeObserver(() => recalcGlobalCardHeight());
+    const ro = new ResizeObserver(() => scheduleRecalc());
     if (appRootRef.current) ro.observe(appRootRef.current);
 
-    // Дополнительный таймер для корректировки после полной загрузки
-    const timer = setTimeout(() => recalcGlobalCardHeight(), 500);
+    const timer = setTimeout(() => scheduleRecalc(), 500);
+
+    // Реакция на изменение масштаба/вьюпорта (браузерный zoom)
+    const vv = window.visualViewport;
+    if (vv && typeof vv.addEventListener === 'function') {
+      vv.addEventListener('resize', onResizeOrLoad);
+    }
 
     return () => {
       window.removeEventListener('resize', onResizeOrLoad);
       window.removeEventListener('load', onResizeOrLoad);
-      imgs.forEach(img => img.removeEventListener('load', onResizeOrLoad));
+      imgs.forEach((img) => img.removeEventListener('load', onResizeOrLoad));
+      if (vv && typeof vv.removeEventListener === 'function') {
+        vv.removeEventListener('resize', onResizeOrLoad);
+      }
       ro.disconnect();
       clearTimeout(timer);
     };
-  }, []);
+  }, [scheduleRecalc]);
 
   // Итоговая цена
   const totalPrice = useMemo(() => {
@@ -439,15 +508,115 @@ const App = () => {
     return total;
   }, [getSelectedItemData, configData, selectedOptions, selectedHeight]);
 
+  // Построение описательных блоков (динамические, статические, дополнительные)
+  const descriptionData = useMemo(() => {
+    if (!configData) return { dynamicBlocks: [], infoBlocks: [] };
+
+    const vKeys = visibleLayerKeys[selectedHeight] || [];
+
+    // 1) Группируем соседние слои с одинаковым наполнением
+    const groups = [];
+    let current = null;
+    vKeys.forEach((k, idx) => {
+      const id = selectedOptions[k];
+      const item = getSelectedItemData(k, id);
+      if (!item) return;
+      const indexHuman = idx + 1; // 1..N
+      if (!current) {
+        current = { name: item.name, slug: item.slug, item, indices: [indexHuman] };
+      } else if (current.slug === item.slug) {
+        current.indices.push(indexHuman);
+      } else {
+        groups.push(current);
+        current = { name: item.name, slug: item.slug, item, indices: [indexHuman] };
+      }
+    });
+    if (current) groups.push(current);
+
+    // 2) Динамические блоки по группам
+    const layerDescMap = layerDescriptions || {};
+    const staticFromDesc = Array.isArray(layerDescMap.staticBlocks)
+      ? layerDescMap.staticBlocks
+      : [];
+
+    const humanizeIndices = (arr) => {
+      if (!arr.length) return '';
+      if (arr.length === 1) return `Слой ${arr[0]}`;
+      if (arr.length === 2) return `Слой ${arr[0]} и ${arr[1]}`;
+      return `Слой ${arr.slice(0, -1).join(', ')} и ${arr[arr.length - 1]}`;
+    };
+
+    const dynamicBlocks = groups.map((g) => {
+      const desc = layerDescMap[g.slug] || layerDescMap[g.name] || null;
+      const titleName = (desc?.name || g.name || '').toString();
+      return {
+        kind: 'dynamic',
+        key: `dyn-${g.slug}-${g.indices.join('-')}`,
+        title: `${humanizeIndices(g.indices)}: ${titleName}`.trim(),
+        name: titleName,
+        description: desc?.description || '',
+        image: desc?.image || g.item?.icon || '',
+      };
+    });
+
+    // 3) Статические блоки (всегда есть, сортируем по order)
+    const staticBlocks = staticFromDesc
+      .slice()
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .map((b) => ({
+        kind: 'static',
+        key: `static-${b.id}`,
+        title: b.title,
+        name: b.title,
+        description: b.description || '',
+        image: b.image || '',
+        order: typeof b.order === 'number' ? b.order : 1000,
+      }));
+
+    // 4) Дополнительные блоки от использованных наполнений (уникальные)
+    const usedSlugs = Array.from(new Set(groups.map((g) => g.slug).filter(Boolean)));
+    const additional = [];
+    const seenIds = new Set();
+    usedSlugs.forEach((slug) => {
+      const desc = layerDescMap[slug];
+      if (!desc || !Array.isArray(desc.additionalBlocks)) return;
+      desc.additionalBlocks.forEach((ab) => {
+        if (ab && !seenIds.has(ab.id)) {
+          seenIds.add(ab.id);
+          additional.push({
+            kind: 'additional',
+            key: `add-${ab.id}`,
+            title: ab.title || '',
+            name: ab.title || '',
+            description: ab.description || '',
+            image: ab.image || '',
+            order: typeof ab.order === 'number' ? ab.order : 1000,
+          });
+        }
+      });
+    });
+
+    const infoBlocks = [...staticBlocks, ...additional].sort(
+      (a, b) => (a.order || 0) - (b.order || 0),
+    );
+
+    return { dynamicBlocks, infoBlocks };
+  }, [configData, selectedOptions, selectedHeight, getSelectedItemData, layerDescriptions]);
+
   const handleOptionChange = (layerKey, itemId) => {
-    setSelectedOptions(prev => ({ ...prev, [layerKey]: itemId }));
+    setSelectedOptions((prev) => ({ ...prev, [layerKey]: itemId }));
   };
 
   const handleAddToCart = () => {
     if (!configData) return;
 
-    const getName = (key) => getSelectedItemData(key, selectedOptions[key])?.name || '';
-    const name = `Матрас ${selectedSize}, ${selectedHeight}см — ${getName('sloj-odin')} + ${getName('sloj-dva')} + ${getName('sloj-tri')} | Чехол: ${getName('potah')}`;
+    const getName = (key) =>
+      getSelectedItemData(key, selectedOptions[key])?.name || '';
+    const name = `Матрас ${selectedSize}, ${selectedHeight}см — ${getName(
+      'sloj-odin',
+    )} + ${getName('sloj-dva')} + ${getName(
+      'sloj-tri',
+    )} | Чехол: ${getName('potah')}`;
 
     const data = {
       name,
@@ -459,11 +628,15 @@ const App = () => {
         cover: getName('potah'),
         size: selectedSize,
         height: `${selectedHeight} см`,
-      }
+      },
     };
 
     console.log('Product added to cart:', data);
-    alert(`Товар добавлен в корзину:\n${name}\nЦена: ${totalPrice.toLocaleString('ru-RU')} Kč`);
+    alert(
+      `Товар добавлен в корзину:\n${name}\nЦена: ${totalPrice.toLocaleString(
+        'ru-RU',
+      )} Kč`,
+    );
   };
 
   const scrollToDetails = () => {
@@ -472,10 +645,16 @@ const App = () => {
   };
 
   if (loading) {
-    return <div className="app-root loading-screen">Загрузка конфигуратора...</div>;
+    return (
+      <div className="app-root loading-screen">
+        Загрузка конфигуратора...
+      </div>
+    );
   }
   if (error || !configData) {
-    return <div className="app-root error-screen">{error || 'Ошибка загрузки'}</div>;
+    return (
+      <div className="app-root error-screen">{error || 'Ошибка загрузки'}</div>
+    );
   }
 
   const visibleKeys = visibleLayerKeys[selectedHeight];
@@ -485,26 +664,33 @@ const App = () => {
     <div
       ref={appRootRef}
       className={`app-root ${pinnedActive ? 'with-pinned' : ''}`}
-      style={{ "--global-card-min-height": `${globalCardHeight}px` }}
+      style={{ '--global-card-min-height': `${globalCardHeight}px` }}
     >
-      {/* Фиксированная визуализация матраса (мобильные, по умолчанию включено) */}
+      {/* Фиксированная визуализация матраса (мобильные) */}
       {pinnedActive && (
         <div className="pinned-mattress" aria-live="polite">
           <div className="pinned-layers">
             <img
-              src={`/layers/${selectedHeight}/${sizeKind(selectedSize)}/frame.webp`}
+              src={`/layers/${selectedHeight}/${sizeKind(
+                selectedSize,
+              )}/frame.webp`}
               alt="Каркас матраса"
               className="mattress-layer pinned-frame"
               style={{ zIndex: 100 }}
             />
             {visibleKeys.map((layerKey, index) => {
-              const selectedItem = getSelectedItemData(layerKey, selectedOptions[layerKey]);
+              const selectedItem = getSelectedItemData(
+                layerKey,
+                selectedOptions[layerKey],
+              );
               if (!selectedItem) return null;
               const zIndexMap = { 'sloj-odin': 1, 'sloj-dva': 10, 'sloj-tri': 2 };
               return (
                 <img
                   key={layerKey}
-                  src={`/layers/${selectedHeight}/${sizeKind(selectedSize)}/${layerKey}/${selectedItem.slug}.webp`}
+                  src={`/layers/${selectedHeight}/${sizeKind(
+                    selectedSize,
+                  )}/${layerKey}/${selectedItem.slug}.webp`}
                   alt={selectedItem.name}
                   className={`mattress-layer layer-${index + 1}`}
                   style={{ zIndex: zIndexMap[layerKey] }}
@@ -517,23 +703,30 @@ const App = () => {
 
       {/* Контент */}
       <div className="layout">
-        {/* Визуализация для десктопа (обычная, не фиксированная) */}
+        {/* Визуализация для десктопа (обычная) */}
         <div className="visual" aria-hidden={pinnedActive}>
           <div className="layers-canvas">
             <img
-              src={`/layers/${selectedHeight}/${sizeKind(selectedSize)}/frame.webp`}
+              src={`/layers/${selectedHeight}/${sizeKind(
+                selectedSize,
+              )}/frame.webp`}
               alt="Каркас матраса"
               className="mattress-layer layer-frame"
               style={{ zIndex: 100 }}
             />
             {visibleKeys.map((layerKey, index) => {
-              const selectedItem = getSelectedItemData(layerKey, selectedOptions[layerKey]);
+              const selectedItem = getSelectedItemData(
+                layerKey,
+                selectedOptions[layerKey],
+              );
               if (!selectedItem) return null;
               const zIndexMap = { 'sloj-odin': 1, 'sloj-dva': 10, 'sloj-tri': 2 };
               return (
                 <img
                   key={layerKey}
-                  src={`/layers/${selectedHeight}/${sizeKind(selectedSize)}/${layerKey}/${selectedItem.slug}.webp`}
+                  src={`/layers/${selectedHeight}/${sizeKind(
+                    selectedSize,
+                  )}/${layerKey}/${selectedItem.slug}.webp`}
                   alt={selectedItem.name}
                   className={`mattress-layer layer-${index + 1}`}
                   style={{ zIndex: zIndexMap[layerKey] }}
@@ -548,7 +741,7 @@ const App = () => {
           <div className="control-group">
             <h3 className="control-title">Размер</h3>
             <div className="control-options size-options">
-              {SIZES.map(sz => (
+              {SIZES.map((sz) => (
                 <label key={sz} className="control-item">
                   <input
                     type="radio"
@@ -566,7 +759,7 @@ const App = () => {
           <div className="control-group">
             <h3 className="control-title">Высота</h3>
             <div className="control-options height-options">
-              {HEIGHTS.map(h => (
+              {HEIGHTS.map((h) => (
                 <label key={h} className="control-item">
                   <input
                     type="radio"
@@ -582,7 +775,7 @@ const App = () => {
           </div>
         </div>
 
-        {/* Секции с кнопками — горизонтально на ПК */}
+        {/* Секции с кнопками */}
         <div className="selectors" ref={selectorsTopRef}>
           {visibleKeys.map((key) => (
             <OptionGroup
@@ -593,7 +786,8 @@ const App = () => {
               selectedId={selectedOptions[key]}
               onChange={handleOptionChange}
               columnsDesktop={3}
-              columnsMobile={5}
+              columnsMobile={4}
+              onLayoutChange={scheduleRecalc}
             />
           ))}
 
@@ -604,37 +798,49 @@ const App = () => {
             selectedId={selectedOptions['potah']}
             onChange={handleOptionChange}
             columnsDesktop={3}
-            columnsMobile={5}
+            columnsMobile={4}
+            onLayoutChange={scheduleRecalc}
           />
         </div>
 
-        {/* Калькулятор — sticky блок на десктопе */}
+        {/* Калькулятор — sticky на десктопе */}
         <aside className="sidebar" ref={priceCalcRef}>
           <div className="price-calculator">
             <div className="price-header">
               <span className="price-label">Цена и подробности</span>
               <div className="price-amount">
-                <span className="price-value">{totalPrice.toLocaleString('ru-RU')}</span>
+                <span className="price-value">
+                  {totalPrice.toLocaleString('ru-RU')}
+                </span>
                 <span className="price-currency">Kč</span>
               </div>
             </div>
 
             <div className="price-breakdown">
               <div className="price-row">
-                <span>Высота</span><span>{selectedHeight} см</span><span className="price-col" />
+                <span>Высота</span>
+                <span>{selectedHeight} см</span>
+                <span className="price-col" />
               </div>
               <div className="price-row">
-                <span>Размер</span><span>{selectedSize}</span><span className="price-col" />
+                <span>Размер</span>
+                <span>{selectedSize}</span>
+                <span className="price-col" />
               </div>
 
               {visibleKeys.map((key) => {
-                const item = getSelectedItemData(key, selectedOptions[key]);
+                const item = getSelectedItemData(
+                  key,
+                  selectedOptions[key],
+                );
                 return (
                   <div key={key} className="price-row">
                     <span>{LAYER_TITLES[key]}</span>
                     <span>{item?.name || '-'}</span>
                     <span className="price-col">
-                      {item?.price ? `${item.price.toLocaleString('ru-RU')} Kč` : ''}
+                      {item?.price
+                        ? `${item.price.toLocaleString('ru-RU')} Kč`
+                        : ''}
                     </span>
                   </div>
                 );
@@ -642,10 +848,17 @@ const App = () => {
 
               <div className="price-row">
                 <span>Чехол</span>
-                <span>{getSelectedItemData('potah', selectedOptions['potah'])?.name || '-'}</span>
+                <span>
+                  {getSelectedItemData('potah', selectedOptions['potah'])
+                    ?.name || '-'}
+                </span>
                 <span className="price-col">
-                  {getSelectedItemData('potah', selectedOptions['potah'])?.price
-                    ? `${getSelectedItemData('potah', selectedOptions['potah']).price.toLocaleString('ru-RU')} Kč`
+                  {getSelectedItemData('potah', selectedOptions['potah'])
+                    ?.price
+                    ? `${getSelectedItemData(
+                        'potah',
+                        selectedOptions['potah'],
+                      ).price.toLocaleString('ru-RU')} Kč`
                     : ''}
                 </span>
               </div>
@@ -656,23 +869,103 @@ const App = () => {
             </button>
           </div>
         </aside>
+
+        {/* Блоки описания слоёв и информации */}
+        <section className="details">
+        {descriptionData.dynamicBlocks.map((b) => (
+          <article key={b.key} className="detail-block">
+            <div className="detail-card">
+              {b.image ? (
+                <div className="detail-image-wrap">
+                  <img src={b.image} alt={b.name} className="detail-image" onError={(e)=>{e.currentTarget.style.display='none';}} />
+                </div>
+              ) : null}
+              <div className="detail-content">
+                <h4 className="detail-title">{b.title}</h4>
+                {b.description ? (
+                  <p className="detail-text">{b.description}</p>
+                ) : null}
+              </div>
+            </div>
+            <div className="detail-divider" />
+          </article>
+        ))}
+
+        {/* Чехол — после наполнителя */}
+        {(() => {
+          const coverId = selectedOptions['potah'];
+          const coverMap = (layerDescriptions && layerDescriptions.coverDescriptions) || {};
+          const coverDesc = coverMap[coverId];
+          if (!coverDesc) return null;
+          const b = {
+            key: `cover-${coverId}`,
+            title: coverDesc.title,
+            name: coverDesc.title,
+            description: coverDesc.description,
+            image: coverDesc.image,
+          };
+          return (
+            <article key={b.key} className="detail-block">
+              <div className="detail-card">
+                {b.image ? (
+                  <div className="detail-image-wrap">
+                    <img src={b.image} alt={b.name} className="detail-image" onError={(e)=>{e.currentTarget.style.display='none';}} />
+                  </div>
+                ) : null}
+                <div className="detail-content">
+                  <h4 className="detail-title">{b.title}</h4>
+                  {b.description ? (
+                    <p className="detail-text">{b.description}</p>
+                  ) : null}
+                </div>
+              </div>
+              <div className="detail-divider" />
+            </article>
+          );
+        })()}
+
+        {descriptionData.infoBlocks.map((b) => (
+          <article key={b.key} className="detail-block">
+            <div className="detail-card">
+              {b.image ? (
+                <div className="detail-image-wrap">
+                  <img src={b.image} alt={b.name} className="detail-image" onError={(e)=>{e.currentTarget.style.display='none';}} />
+                </div>
+              ) : null}
+              <div className="detail-content">
+                <h4 className="detail-title">{b.title}</h4>
+                {b.description ? (
+                  <p className="detail-text">{b.description}</p>
+                ) : null}
+              </div>
+            </div>
+            <div className="detail-divider" />
+          </article>
+        ))}
+        </section>
       </div>
 
       {/* Постоянный нижний блок с ценой */}
       <div className="bottom-bar" role="region" aria-label="Итоговая цена">
         <div className="bb-price">
-          <span className="bb-value">{totalPrice.toLocaleString('ru-RU')}</span>
+          <span className="bb-value">
+            {totalPrice.toLocaleString('ru-RU')}
+          </span>
           <span className="bb-currency">Kč</span>
         </div>
 
         <div className="bb-actions">
-          <button className="bb-btn" onClick={scrollToDetails}>Перейти к подробностям</button>
+          <button className="bb-btn" onClick={scrollToDetails}>
+            Перейти к подробностям
+          </button>
           {isMobile && (
             <button
               className="bb-btn secondary"
-              onClick={() => setShowPinnedMattress(v => !v)}
+              onClick={() => setShowPinnedMattress((v) => !v)}
             >
-              {showPinnedMattress ? 'Выключить постоянное отображение матраса' : 'Включить постоянное отображение матраса'}
+              {showPinnedMattress
+                ? 'Выключить постоянное отображение матраса'
+                : 'Включить постоянное отображение матраса'}
             </button>
           )}
         </div>
