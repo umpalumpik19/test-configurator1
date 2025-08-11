@@ -126,7 +126,7 @@ const OptionGroup = ({
   }, [isMobile, columnsDesktop, onLayoutChange]);
 
   return (
-    <section className="layer-selector" ref={containerRef}>
+    <section className="layer-selector glass-panel" ref={containerRef}>
       <h3 className="layer-title">{title}</h3>
       <div
         className="layer-options"
@@ -146,18 +146,20 @@ const OptionGroup = ({
                 onChange={() => onChange(name, opt.id)}
               />
               <div className="option-card">
-                {img ? (
-                  <img
-                    src={img}
-                    alt={opt.name}
-                    className="option-image"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="image-placeholder" aria-hidden="true" />
-                )}
+                <div className="option-media">
+                  {img ? (
+                    <img
+                      src={img}
+                      alt={opt.name}
+                      className="option-image"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="image-placeholder" aria-hidden="true" />
+                  )}
+                </div>
                 <span className="option-name">{formatLabel(opt.name)}</span>
               </div>
             </label>
@@ -422,17 +424,17 @@ const App = () => {
     let imageH, gap, paddingTopBottom, border;
 
     if (screenWidth <= 480) {
-      imageH = 28;
+      imageH = 32; // синхронизировано с :root --media-h в CSS для маленьких экранов
       gap = 6;
       paddingTopBottom = 12;
       border = 4;
     } else if (screenWidth <= 1024) {
-      imageH = 32;
+      imageH = 36; // синхронизировано с :root --media-h для планшетов/моб.
       gap = 6;
       paddingTopBottom = 12;
       border = 4;
     } else {
-      imageH = 40;
+      imageH = 48; // синхронизировано с :root --media-h для десктопа
       gap = 6;
       paddingTopBottom = 12;
       border = 4;
@@ -704,7 +706,7 @@ const App = () => {
       {/* Контент */}
       <div className="layout">
         {/* Визуализация для десктопа (обычная) */}
-        <div className="visual" aria-hidden={pinnedActive}>
+        <div className="visual glass-panel" aria-hidden={pinnedActive}>
           <div className="layers-canvas">
             <img
               src={`/layers/${selectedHeight}/${sizeKind(
@@ -738,7 +740,7 @@ const App = () => {
 
         {/* Селекторы размеров и высоты */}
         <div className="controls">
-          <div className="control-group">
+          <div className="control-group glass-panel">
             <h3 className="control-title">Размер</h3>
             <div className="control-options size-options">
               {SIZES.map((sz) => (
@@ -756,7 +758,7 @@ const App = () => {
             </div>
           </div>
 
-          <div className="control-group">
+          <div className="control-group glass-panel">
             <h3 className="control-title">Высота</h3>
             <div className="control-options height-options">
               {HEIGHTS.map((h) => (
@@ -805,7 +807,7 @@ const App = () => {
 
         {/* Калькулятор — sticky на десктопе */}
         <aside className="sidebar" ref={priceCalcRef}>
-          <div className="price-calculator">
+          <div className="price-calculator glass-panel">
             <div className="price-header">
               <span className="price-label">Цена и подробности</span>
               <div className="price-amount">
@@ -871,7 +873,7 @@ const App = () => {
         </aside>
 
         {/* Блоки описания слоёв и информации */}
-        <section className="details">
+        <section className="details glass-panel">
         {descriptionData.dynamicBlocks.map((b) => (
           <article key={b.key} className="detail-block">
             <div className="detail-card">

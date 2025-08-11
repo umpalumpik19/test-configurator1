@@ -110,14 +110,17 @@
     "cotton": {
       "title": "POTAH • COTTON",
       "description": "Хлопковый чехол: мягкий на ощупь, хорошо дышит, легко снимается и стирается.",
-      "image": "/logo512.png"
+      "image": "/icons/Хлопок.webp"
     },
     "linen": {
       "title": "POTAH • LINEN",
       "description": "Льняной чехол: натуральная текстура, повышенная прочность и влагоотвод.",
-      "image": "/logo512.png"
+      "image": "/icons/Лен.webp"
+    },
+    "hemp": {
+      "title": "POTAH • HEMP",
+      "description": "Конопляный чехол: очень прочный, естественно антибактериальный и хорошо отводит влагу.",
+      "image": "/icons/Конопля.webp"
     }
   }
 }
-
-

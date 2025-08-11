@@ -22,7 +22,8 @@
   ],
 
   "covers": [
-    { "id": "cotton", "name": "Хлопок", "price": 0, "slug": "Хлопок" },
-    { "id": "linen",  "name": "Лён",    "price": 0, "slug": "Лён" }
+    { "id": "cotton", "name": "Хлопок",   "price": 0, "slug": "Хлопок",  "icon": "/icons/Хлопок.webp" },
+    { "id": "linen",  "name": "Лён",      "price": 0, "slug": "Лён",     "icon": "/icons/Лен.webp" },
+    { "id": "hemp",   "name": "Конопля",  "price": 0, "slug": "Конопля", "icon": "/icons/Конопля.webp" }
   ]
 }
