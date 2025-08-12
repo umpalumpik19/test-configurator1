@@ -67,10 +67,12 @@ const formatLabel = (s) => {
 /** Определение оптимального количества колонок для опций */
 const getOptimalColumns = (containerWidth, isMobile, baseColumns) => {
   if (isMobile) {
-    // На моб./планшетах делаем шире карточки, уменьшая кол-во колонок
+    // На планшетах/мобильных устройствах адаптируем под ширину экрана
     if (containerWidth < 360) return 3;
     if (containerWidth < 520) return 4;
-    return 4;
+    if (containerWidth < 768) return 5; // Планшеты - больше колонок для компактности
+    if (containerWidth < 1024) return 6; // Большие планшеты
+    return 5; // По умолчанию для мобильных
   }
   // Десктоп
   if (containerWidth < 240) return 2;
@@ -86,7 +88,7 @@ const OptionGroup = ({
   selectedId,
   onChange,
   columnsDesktop = 3,
-  columnsMobile = 4,
+  columnsMobile = 5,
   onLayoutChange,
 }) => {
   const isMobile = useIsMobile();
@@ -259,7 +261,7 @@ const App = () => {
   const [error, setError] = useState(null);
   const [urlInitialized, setUrlInitialized] = useState(false);
 
-  const isMobile = useIsMobile();
+  const isMobile = useIsMobile(1100);
   const [showPinnedMattress, setShowPinnedMattress] = useState(true);
   const priceCalcRef = useRef(null);
   const selectorsTopRef = useRef(null);
@@ -424,17 +426,17 @@ const App = () => {
     let imageH, gap, paddingTopBottom, border;
 
     if (screenWidth <= 480) {
-      imageH = 32; // синхронизировано с :root --media-h в CSS для маленьких экранов
+      imageH = 28;
       gap = 6;
       paddingTopBottom = 12;
       border = 4;
     } else if (screenWidth <= 1024) {
-      imageH = 36; // синхронизировано с :root --media-h для планшетов/моб.
+      imageH = 32;
       gap = 6;
       paddingTopBottom = 12;
       border = 4;
     } else {
-      imageH = 48; // синхронизировано с :root --media-h для десктопа
+      imageH = 40;
       gap = 6;
       paddingTopBottom = 12;
       border = 4;
@@ -516,24 +518,31 @@ const App = () => {
 
     const vKeys = visibleLayerKeys[selectedHeight] || [];
 
-    // 1) Группируем соседние слои с одинаковым наполнением
+    // 1) Группируем одинаковые наполнения (необязательно соседние)
+    //    Пример: если слои 1 и 3 одинаковые, а 2 — другой, то получаем группу с индексами [1,3]
     const groups = [];
-    let current = null;
+    const slugToGroupIndex = new Map();
     vKeys.forEach((k, idx) => {
       const id = selectedOptions[k];
       const item = getSelectedItemData(k, id);
       if (!item) return;
       const indexHuman = idx + 1; // 1..N
-      if (!current) {
-        current = { name: item.name, slug: item.slug, item, indices: [indexHuman] };
-      } else if (current.slug === item.slug) {
-        current.indices.push(indexHuman);
+      const groupKey = item?.slug || item?.name || `unknown-${indexHuman}`;
+
+      if (slugToGroupIndex.has(groupKey)) {
+        const gi = slugToGroupIndex.get(groupKey);
+        groups[gi].indices.push(indexHuman);
       } else {
-        groups.push(current);
-        current = { name: item.name, slug: item.slug, item, indices: [indexHuman] };
+        const gi = groups.length;
+        slugToGroupIndex.set(groupKey, gi);
+        groups.push({
+          name: item.name,
+          slug: item.slug,
+          item,
+          indices: [indexHuman],
+        });
       }
     });
-    if (current) groups.push(current);
 
     // 2) Динамические блоки по группам
     const layerDescMap = layerDescriptions || {};
@@ -780,17 +789,17 @@ const App = () => {
         {/* Секции с кнопками */}
         <div className="selectors" ref={selectorsTopRef}>
           {visibleKeys.map((key) => (
-            <OptionGroup
-              key={key}
-              title={LAYER_TITLES[key]}
-              options={configData.mattressLayers}
-              name={key}
-              selectedId={selectedOptions[key]}
-              onChange={handleOptionChange}
-              columnsDesktop={3}
-              columnsMobile={4}
-              onLayoutChange={scheduleRecalc}
-            />
+                      <OptionGroup
+            key={key}
+            title={LAYER_TITLES[key]}
+            options={configData.mattressLayers}
+            name={key}
+            selectedId={selectedOptions[key]}
+            onChange={handleOptionChange}
+            columnsDesktop={3}
+            columnsMobile={5}
+            onLayoutChange={scheduleRecalc}
+          />
           ))}
 
           <OptionGroup
@@ -800,7 +809,7 @@ const App = () => {
             selectedId={selectedOptions['potah']}
             onChange={handleOptionChange}
             columnsDesktop={3}
-            columnsMobile={4}
+            columnsMobile={5}
             onLayoutChange={scheduleRecalc}
           />
         </div>

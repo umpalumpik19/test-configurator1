@@ -9,13 +9,13 @@
   --bg-3: rgba(24,24,26,.6);
   --text: #e6e7ea;
   --muted: #b2b6bd;
-  --accent: #ffffff; /* базовый акцент — белый */
-  --accent-2: #ffffff; /* близкий оттенок — белый */
+  --accent: #ffffff; /* базовый акцент */
+  --accent-2: #ffffff9d; /* близкий оттенок */
   --line: color-mix(in oklab, #ffffff 8%, transparent);
   --radius: 12px;
   --gap: 24px;
   --padded: 20px;
-  --media-h: 48px; /* фиксированная высота медиазоны в карточке (чуть больше, чтобы картинка занимала больше места) */
+  --media-h: 40px; /* фиксированная высота медиазоны в карточке */
 
   /* Анимации в духе iOS/macOS */
   --dur-fast: 140ms;
@@ -47,6 +47,16 @@ html, body { overflow-x: hidden; } /* Никогда не допускаем г�
 
 /* Когда матрас закреплён сверху — отступ под него */
 .app-root.with-pinned { padding-top: var(--pinned-h); }
+
+/* Корректный скролл к блокам при закреплённом матрасе */
+.with-pinned .selectors,
+.with-pinned .sidebar,
+.with-pinned .details {
+  scroll-margin-top: var(--pinned-h);
+}
+
+/* При активной фиксации матраса скрываем обычную визуализацию */
+.with-pinned .visual{ display: none; }
 
 /* Фиксированный матрас (мобильная функция) */
 .pinned-mattress{
@@ -219,20 +229,22 @@ html, body { overflow-x: hidden; } /* Никогда не допускаем г�
   display: grid;
   place-items: center;
   height: var(--media-h);
+  padding: 2px; /* Небольшой внутренний отступ для безопасности */
 }
 
-/* Картинки одинакового размера */
+/* Картинки увеличенного размера, но в пределах медиазоны */
 .option-image{
-  max-height: 100%;
-  max-width: 88%; /* больше заполняет ширину карточки */
+  max-height: calc(var(--media-h) - 4px); /* Вычитаем padding медиазоны */
+  max-width: 95%; /* Увеличили с 80% до 95% для большего заполнения */
+  width: auto;
+  height: auto;
   object-fit: contain;
   border-radius: 6px;
   flex-shrink: 0;
-  transform: translateY(-2px); /* визуально чуть выше внутри карточки */
 }
 .image-placeholder{
-  width: var(--media-h);
-  height: var(--media-h);
+  width: calc(var(--media-h) - 4px);
+  height: calc(var(--media-h) - 4px);
   background: #3a3a3c;
   border-radius: 6px;
   flex-shrink: 0;
@@ -278,13 +290,13 @@ html, body { overflow-x: hidden; } /* Никогда не допускаем г�
   padding-top: 10px;
   display: grid;
   gap: 6px;
-  overflow-x: auto;
+  overflow-x: hidden; /* Никогда не показываем горизонтальную прокрутку */
 }
 .price-row{
   display: grid;
-  grid-template-columns: minmax(80px, 120px) minmax(100px, 1fr) minmax(60px, auto);
+  grid-template-columns: minmax(60px, 100px) 1fr minmax(50px, auto);
   align-items: start;
-  gap: 10px;
+  gap: 8px;
   font-size: 13px;
   color: var(--muted);
   min-width: 0;
@@ -292,16 +304,21 @@ html, body { overflow-x: hidden; } /* Никогда не допускаем г�
 .price-row > span {
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0; /* Важно для правильного сжатия */
+}
+.price-row > span:first-child {
   white-space: nowrap;
 }
 .price-row > span:nth-child(2) {
   white-space: normal;
   word-break: break-word;
+  line-height: 1.3;
 }
 .price-col{
   color: var(--accent);
   text-align: right;
   white-space: nowrap;
+  font-size: 12px; /* Чуть меньше для компактности */
 }
 
 .add-to-cart-btn{
@@ -351,8 +368,21 @@ html, body { overflow-x: hidden; } /* Никогда не допускаем г�
   white-space: normal;
   min-width: 140px;
 }
+
+/* Скрываем кнопку "Перейти к подробностям" на экранах,
+   где калькулятор закреплён справа (десктоп > 1100px) */
+@media (min-width: 1101px){
+  .bottom-bar .bb-actions .bb-btn{ display: none; }
+}
 .bb-btn:hover{ border-color: color-mix(in oklab, var(--accent) 60%, transparent); box-shadow: 0 8px 24px rgba(0,0,0,.26); transform: translateY(-1px); }
 .bb-btn.secondary{ opacity: .95; }
+
+/* Полностью убираем нижний фиксированный блок цены на десктопах,
+   где сайдбар фиксируется справа (sticky) */
+@media (min-width: 1101px){
+  .bottom-bar{ display: none; }
+  .app-root{ padding-bottom: 0; }
+}
 
 /* Стеклянные панели с единым стилем */
 .glass-panel{
@@ -393,7 +423,7 @@ html, body { overflow-x: hidden; } /* Никогда не допускаем г�
 /* Шаг 3: мобильный — включаем фиксированный матрас, секции в одну колонку */
 @media (max-width: 1024px){
   :root{ --pinned-h: 200px; }
-  :root{ --media-h: 36px; }
+  :root{ --media-h: 32px; }
 
   .layout{ padding: 16px; gap: 16px; }
   .visual{ display: none; } /* используется закреплённая визуализация */
@@ -406,7 +436,18 @@ html, body { overflow-x: hidden; } /* Никогда не допускаем г�
 
   .selectors{ grid-template-columns: 1fr; }
   .layer-options{ gap: 8px; }
-  /* размеры изображения управляются высотой медиазоны через --media-h */
+  
+  /* Обновленные размеры для мобильных с учетом новой логики */
+  .option-media{ padding: 1px; }
+  .option-image{ 
+    max-height: calc(var(--media-h) - 2px);
+    max-width: 92%;
+  }
+  .image-placeholder{ 
+    width: calc(var(--media-h) - 2px); 
+    height: calc(var(--media-h) - 2px); 
+  }
+  
   .option-name{ font-size: 10px; }
 
   .sidebar{ order: 10; }
@@ -425,7 +466,16 @@ html, body { overflow-x: hidden; } /* Никогда не допускаем г�
   .size-options{ grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
   .control-box{ font-size: 11px; min-height: 40px; padding: 4px 6px; }
 
-  /* размеры изображения управляются высотой медиазоны через --media-h */
+  .option-media{ padding: 1px; }
+  .option-image{ 
+    max-height: calc(var(--media-h) - 2px);
+    max-width: 90%;
+  }
+  .image-placeholder{ 
+    width: calc(var(--media-h) - 2px); 
+    height: calc(var(--media-h) - 2px); 
+  }
+  
   .option-name{ font-size: 9px; }
 
   .price-value{ font-size: 24px; }
@@ -433,8 +483,18 @@ html, body { overflow-x: hidden; } /* Никогда не допускаем г�
 }
 
 @media (max-width: 420px){
-  :root{ --media-h: 32px; }
+  :root{ --media-h: 28px; }
   .size-options{ grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); }
-  /* размеры изображения управляются высотой медиазоны через --media-h */
+  
+  .option-media{ padding: 1px; }
+  .option-image{ 
+    max-height: calc(var(--media-h) - 2px);
+    max-width: 88%;
+  }
+  .image-placeholder{ 
+    width: calc(var(--media-h) - 2px); 
+    height: calc(var(--media-h) - 2px); 
+  }
+  
   .option-name{ font-size: 8.5px; }
 }
