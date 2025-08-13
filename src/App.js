@@ -262,7 +262,6 @@ const App = () => {
   const [urlInitialized, setUrlInitialized] = useState(false);
 
   const isMobile = useIsMobile(1100);
-  const [showPinnedMattress, setShowPinnedMattress] = useState(true);
   const priceCalcRef = useRef(null);
   const selectorsTopRef = useRef(null);
   const appRootRef = useRef(null);
@@ -271,9 +270,6 @@ const App = () => {
   // Глобальная, единая высота карточек
   const [globalCardHeight, setGlobalCardHeight] = useState(56);
 
-  useEffect(() => {
-    setShowPinnedMattress(isMobile);
-  }, [isMobile]);
 
   // Загрузка конфигурации + url-mapping
   useEffect(() => {
@@ -669,53 +665,20 @@ const App = () => {
   }
 
   const visibleKeys = visibleLayerKeys[selectedHeight];
-  const pinnedActive = isMobile && showPinnedMattress;
+  
 
   return (
     <div
       ref={appRootRef}
-      className={`app-root ${pinnedActive ? 'with-pinned' : ''}`}
+      className="app-root"
       style={{ '--global-card-min-height': `${globalCardHeight}px` }}
     >
-      {/* Фиксированная визуализация матраса (мобильные) */}
-      {pinnedActive && (
-        <div className="pinned-mattress" aria-live="polite">
-          <div className="pinned-layers">
-            <img
-              src={`/layers/${selectedHeight}/${sizeKind(
-                selectedSize,
-              )}/frame.webp`}
-              alt="Каркас матраса"
-              className="mattress-layer pinned-frame"
-              style={{ zIndex: 100 }}
-            />
-            {visibleKeys.map((layerKey, index) => {
-              const selectedItem = getSelectedItemData(
-                layerKey,
-                selectedOptions[layerKey],
-              );
-              if (!selectedItem) return null;
-              const zIndexMap = { 'sloj-odin': 1, 'sloj-dva': 10, 'sloj-tri': 2 };
-              return (
-                <img
-                  key={layerKey}
-                  src={`/layers/${selectedHeight}/${sizeKind(
-                    selectedSize,
-                  )}/${layerKey}/${selectedItem.slug}.webp`}
-                  alt={selectedItem.name}
-                  className={`mattress-layer layer-${index + 1}`}
-                  style={{ zIndex: zIndexMap[layerKey] }}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Контент */}
       <div className="layout">
         {/* Визуализация для десктопа (обычная) */}
-        <div className="visual glass-panel" aria-hidden={pinnedActive}>
+        <div className="visual glass-panel">
+          
           <div className="layers-canvas">
             <img
               src={`/layers/${selectedHeight}/${sizeKind(
@@ -969,16 +932,6 @@ const App = () => {
           <button className="bb-btn" onClick={scrollToDetails}>
             Перейти к подробностям
           </button>
-          {isMobile && (
-            <button
-              className="bb-btn secondary"
-              onClick={() => setShowPinnedMattress((v) => !v)}
-            >
-              {showPinnedMattress
-                ? 'Выключить постоянное отображение матраса'
-                : 'Включить постоянное отображение матраса'}
-            </button>
-          )}
         </div>
       </div>
     </div>

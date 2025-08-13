@@ -1,19 +1,19 @@
 {
   "mattressLayers": [
-    { "id": "Latex Мягкий",              "name": "Latex Мягкий",              "price": 2000, "icon": "/icons/Latex-Мягкий.webp",               "slug": "Latex-Мягкий" },
-    { "id": "Latex Средне-твердый",      "name": "Latex Средне-твердый",      "price": 2200, "icon": "/icons/Latex-Средне-твердый.webp",             "slug": "Latex-Средне-твердый" },
+    { "id": "Latex Мягкий",              "name": "Latex\nМягкий",              "price": 2000, "icon": "/icons/Latex-Мягкий.webp",               "slug": "Latex-Мягкий" },
+    { "id": "Latex Средне-твердый",      "name": "Latex\nСредне-твердый",      "price": 2200, "icon": "/icons/Latex-Средне-твердый.webp",             "slug": "Latex-Средне-твердый" },
 
-    { "id": "Paměťová pěna Мягкая",      "name": "Paměťová pěna Мягкая",      "price": 2400, "icon": "/icons/Paměťová-pěna-Мягкая.webp",             "slug": "Paměťová-pěna-Мягкая" },
-    { "id": "Paměťová pěna Средне-твердая","name": "Paměťová pěna Средне-твердая","price": 2600,"icon": "/icons/Paměťová-pěna-Средне-твердая.webp",           "slug": "Paměťová-pěna-Средне-твердая" },
-    { "id": "Paměťová pěna Твердая",     "name": "Paměťová pěna Твердая",     "price": 2800, "icon": "/icons/Paměťová-pěna-Твердая.webp",             "slug": "Paměťová-pěna-Твердая" },
+    { "id": "Paměťová pěna Мягкая",      "name": "Paměťová pěna\nМягкая",      "price": 2400, "icon": "/icons/Paměťová-pěna-Мягкая.webp",             "slug": "Paměťová-pěna-Мягкая" },
+    { "id": "Paměťová pěna Средне-твердая","name": "Paměťová pěna\nСредне-твердая","price": 2600,"icon": "/icons/Paměťová-pěna-Средне-твердая.webp",           "slug": "Paměťová-pěna-Средне-твердая" },
+    { "id": "Paměťová pěna Твердая",     "name": "Paměťová pěna\nТвердая",     "price": 2800, "icon": "/icons/Paměťová-pěna-Твердая.webp",             "slug": "Paměťová-pěna-Твердая" },
 
-    { "id": "Pur Pena Мягкая",           "name": "Pur Pena Мягкая",           "price": 1500, "icon": "/icons/Pur-Pena-Мягкая.webp",                "slug": "Pur-Pena-Мягкая" },
-    { "id": "Pur Pena Средне-твердая",   "name": "Pur Pena Средне-твердая",   "price": 1700, "icon": "/icons/Pur-Pena-Средне-твердая.webp",              "slug": "Pur-Pena-Средне-твердая" },
-    { "id": "Pur Pena Твердая",          "name": "Pur Pena Твердая",          "price": 2500, "icon": "/icons/Pur-Pena-Твердая.webp",                "slug": "Pur-Pena-Твердая" },
+    { "id": "Pur Pena Мягкая",           "name": "Pur Pena\nМягкая",           "price": 1500, "icon": "/icons/Pur-Pena-Мягкая.webp",                "slug": "Pur-Pena-Мягкая" },
+    { "id": "Pur Pena Средне-твердая",   "name": "Pur Pena\nСредне-твердая",   "price": 1700, "icon": "/icons/Pur-Pena-Средне-твердая.webp",              "slug": "Pur-Pena-Средне-твердая" },
+    { "id": "Pur Pena Твердая",          "name": "Pur Pena\nТвердая",          "price": 2500, "icon": "/icons/Pur-Pena-Твердая.webp",                "slug": "Pur-Pena-Твердая" },
 
-    { "id": "Studená pěna Мягкая",       "name": "Studená pěna Мягкая",       "price": 2000, "icon": "/icons/Studená-pěna-Мягкая.webp",           "slug": "Studená-pěna-Мягкая" },
-    { "id": "Studená pěna Средне-твердая","name": "Studená pěna Средне-твердая","price": 2200,"icon": "/icons/Studená-pěna-Средне-твердая.webp",         "slug": "Studená-pěna-Средне-твердая" },
-    { "id": "Studená pěna Твердая",      "name": "Studená pěna Твердая",      "price": 2400, "icon": "/icons/Studená-pěna-Твердая.webp",           "slug": "Studená-pěna-Твердая" },
+    { "id": "Studená pěna Мягкая",       "name": "Studená pěna\nМягкая",       "price": 2000, "icon": "/icons/Studená-pěna-Мягкая.webp",           "slug": "Studená-pěna-Мягкая" },
+    { "id": "Studená pěna Средне-твердая","name": "Studená pěna\nСредне-твердая","price": 2200,"icon": "/icons/Studená-pěna-Средне-твердая.webp",         "slug": "Studená-pěna-Средне-твердая" },
+    { "id": "Studená pěna Твердая",      "name": "Studená pěna\nТвердая",      "price": 2400, "icon": "/icons/Studená-pěna-Твердая.webp",           "slug": "Studená-pěna-Твердая" },
 
     { "id": "Пружина",                   "name": "Пружина",                   "price": 3000, "icon": "/icons/Пружина.webp",                  "slug": "Пружина" },
     { "id": "Пружина-кокос",             "name": "Пружина-кокос",             "price": 3200, "icon": "/icons/Пружина-кокос.webp",             "slug": "Пружина-кокос" },
