@@ -8,6 +8,7 @@ import React, {
   useCallback,
 } from 'react';
 import './App.css';
+import ShoppingCart from './components/ShoppingCart';
 
 /** ---------- Константы и утилиты ---------- */
 
@@ -30,6 +31,23 @@ const visibleLayerKeys = {
   10: ['sloj-odin'],
   20: ['sloj-odin', 'sloj-dva'],
   30: ['sloj-odin', 'sloj-dva', 'sloj-tri'],
+};
+
+// Функция для проверки доступности слоя в определенной высоте
+const isLayerAvailableAtHeight = (layer, height) => {
+  if (!layer || !layer.availableHeights) return true; // совместимость со старой структурой
+  return layer.availableHeights.includes(height);
+};
+
+// Функция для получения цены слоя для определенного размера
+const getLayerPrice = (layer, size) => {
+  if (!layer) return 0;
+  // Новая структура с ценами по размерам
+  if (layer.prices && typeof layer.prices === 'object') {
+    return layer.prices[size] || 0;
+  }
+  // Старая структура с единой ценой (для обратной совместимости)
+  return layer.price || 0;
 };
 
 const LAYER_TITLES = {
@@ -62,6 +80,18 @@ const formatLabel = (s) => {
       {i < parts.length - 1 ? <br /> : null}
     </React.Fragment>
   ));
+};
+
+/** Форматирование описаний с поддержкой HTML тегов */
+const formatDescription = (html) => {
+  if (!html) return null;
+  
+  // Заменяем переносы строк на <br> если нужно
+  const formattedHtml = String(html)
+    .replace(/\n/g, '<br>')
+    .replace(/\|/g, '<br>');
+  
+  return <div dangerouslySetInnerHTML={{ __html: formattedHtml }} />;
 };
 
 /** Определение оптимального количества колонок для опций */
@@ -260,6 +290,10 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [urlInitialized, setUrlInitialized] = useState(false);
+  
+  // Shopping cart state
+  const [cartItems, setCartItems] = useState([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   const isMobile = useIsMobile(1100);
   const priceCalcRef = useRef(null);
@@ -398,17 +432,55 @@ const App = () => {
     urlMapping,
   ]);
 
-  // Данные выбранного элемента
+  // Проверка совместимости выбранных слоев при изменении высоты матраса
+  useEffect(() => {
+    if (!configData || !urlInitialized) return;
+
+    const vKeys = visibleLayerKeys[selectedHeight];
+    let needsUpdate = false;
+    const updatedOptions = { ...selectedOptions };
+
+    // Проверяем каждый видимый слой
+    vKeys.forEach(layerKey => {
+      const selectedLayerId = selectedOptions[layerKey];
+      if (selectedLayerId) {
+        const selectedLayer = configData.mattressLayers.find(l => l.id === selectedLayerId);
+        
+        // Если выбранный слой недоступен для новой высоты, сбрасываем на первый доступный
+        if (selectedLayer && !isLayerAvailableAtHeight(selectedLayer, selectedHeight)) {
+          const availableLayer = configData.mattressLayers.find(layer => 
+            isLayerAvailableAtHeight(layer, selectedHeight)
+          );
+          
+          if (availableLayer) {
+            updatedOptions[layerKey] = availableLayer.id;
+            needsUpdate = true;
+          }
+        }
+      }
+    });
+
+    if (needsUpdate) {
+      setSelectedOptions(updatedOptions);
+    }
+  }, [selectedHeight, configData, urlInitialized, selectedOptions]);
+
+  // Данные выбранного элемента с учетом размера и высоты
   const getSelectedItemData = useCallback(
     (layerKey, itemId) => {
       if (!configData) return null;
       if (layerKey === 'potah')
         return configData.covers.find((c) => c.id === itemId) || null;
-      return (
-        configData.mattressLayers.find((l) => l.id === itemId) || null
-      );
+      const layer = configData.mattressLayers.find((l) => l.id === itemId) || null;
+      if (!layer) return null;
+      
+      // Возвращаем слой с актуальной ценой для текущего размера
+      return {
+        ...layer,
+        price: getLayerPrice(layer, selectedSize)
+      };
     },
-    [configData],
+    [configData, selectedSize],
   );
 
   /** Стабильный пересчёт общей min-height карточек */
@@ -494,14 +566,16 @@ const App = () => {
     };
   }, [scheduleRecalc]);
 
-  // Итоговая цена
+  // Итоговая цена с учетом размеров и доступности слоев по высоте
   const totalPrice = useMemo(() => {
     if (!configData) return 0;
     let total = 0;
     for (const key of visibleLayerKeys[selectedHeight]) {
       const id = selectedOptions[key];
       const item = getSelectedItemData(key, id);
-      if (item) total += item.price || 0;
+      if (item && item.price) {
+        total += item.price;
+      }
     }
     const cover = getSelectedItemData('potah', selectedOptions['potah']);
     if (cover) total += cover.price || 0;
@@ -614,37 +688,84 @@ const App = () => {
     setSelectedOptions((prev) => ({ ...prev, [layerKey]: itemId }));
   };
 
+  // Shopping cart functions
   const handleAddToCart = () => {
     if (!configData) return;
 
     const getName = (key) =>
       getSelectedItemData(key, selectedOptions[key])?.name || '';
-    const name = `Матрас ${selectedSize}, ${selectedHeight}см — ${getName(
-      'sloj-odin',
-    )} + ${getName('sloj-dva')} + ${getName(
-      'sloj-tri',
-    )} | Чехол: ${getName('potah')}`;
+    
+    // Формируем название только для видимых слоев
+    const vKeys = visibleLayerKeys[selectedHeight];
+    const layerNames = vKeys.map(key => getName(key)).filter(Boolean);
+    const layersText = layerNames.join(' + ');
+    
+    const name = `Матрас ${selectedSize}, ${selectedHeight}см — ${layersText} | Чехол: ${getName('potah')}`;
 
-    const data = {
+    // Формируем конфигурацию только для видимых слоев
+    const configuration = {
+      cover: getName('potah'),
+      size: selectedSize,
+      height: `${selectedHeight} см`,
+    };
+    
+    vKeys.forEach((key, index) => {
+      configuration[`layer${index + 1}`] = getName(key);
+    });
+
+    const cartItem = {
+      id: `mattress-${Date.now()}`, // Simple ID generation
       name,
       price: totalPrice,
-      configuration: {
-        layer1: getName('sloj-odin'),
-        layer2: getName('sloj-dva'),
-        layer3: getName('sloj-tri'),
-        cover: getName('potah'),
-        size: selectedSize,
-        height: `${selectedHeight} см`,
-      },
+      quantity: 1,
+      configuration,
     };
 
-    console.log('Product added to cart:', data);
-    alert(
-      `Товар добавлен в корзину:\n${name}\nЦена: ${totalPrice.toLocaleString(
-        'ru-RU',
-      )} Kč`,
+    // Check if this exact configuration already exists
+    const existingItemIndex = cartItems.findIndex(item => 
+      item.name === cartItem.name && 
+      JSON.stringify(item.configuration) === JSON.stringify(cartItem.configuration)
+    );
+
+    if (existingItemIndex >= 0) {
+      // Update quantity of existing item
+      setCartItems(prevItems => 
+        prevItems.map((item, index) => 
+          index === existingItemIndex 
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      );
+    } else {
+      // Add new item
+      setCartItems(prevItems => [...prevItems, cartItem]);
+    }
+
+    // Open cart modal
+    setIsCartOpen(true);
+  };
+
+  const handleUpdateQuantity = (itemIndex, newQuantity) => {
+    if (newQuantity < 1) return;
+    
+    setCartItems(prevItems => 
+      prevItems.map((item, index) => 
+        index === itemIndex 
+          ? { ...item, quantity: newQuantity }
+          : item
+      )
     );
   };
+
+  const handleRemoveItem = (itemIndex) => {
+    setCartItems(prevItems => 
+      prevItems.filter((_, index) => index !== itemIndex)
+    );
+  };
+
+  const cartTotal = useMemo(() => {
+    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  }, [cartItems]);
 
   const scrollToDetails = () => {
     const target = priceCalcRef.current || selectorsTopRef.current;
@@ -673,6 +794,14 @@ const App = () => {
       className="app-root"
       style={{ '--global-card-min-height': `${globalCardHeight}px` }}
     >
+      {/* Cart Button */}
+      <button 
+        className="cart-button"
+        onClick={() => setIsCartOpen(true)}
+        aria-label="Открыть корзину"
+      >
+        🛒 {cartItems.length > 0 && <span className="cart-badge">{cartItems.length}</span>}
+      </button>
 
       {/* Контент */}
       <div className="layout">
@@ -751,19 +880,26 @@ const App = () => {
 
         {/* Секции с кнопками */}
         <div className="selectors" ref={selectorsTopRef}>
-          {visibleKeys.map((key) => (
-                      <OptionGroup
-            key={key}
-            title={LAYER_TITLES[key]}
-            options={configData.mattressLayers}
-            name={key}
-            selectedId={selectedOptions[key]}
-            onChange={handleOptionChange}
-            columnsDesktop={3}
-            columnsMobile={5}
-            onLayoutChange={scheduleRecalc}
-          />
-          ))}
+          {visibleKeys.map((key) => {
+            // Фильтруем слои по доступности для текущей высоты
+            const availableOptions = configData.mattressLayers.filter(layer => 
+              isLayerAvailableAtHeight(layer, selectedHeight)
+            );
+            
+            return (
+              <OptionGroup
+                key={key}
+                title={LAYER_TITLES[key]}
+                options={availableOptions}
+                name={key}
+                selectedId={selectedOptions[key]}
+                onChange={handleOptionChange}
+                columnsDesktop={3}
+                columnsMobile={5}
+                onLayoutChange={scheduleRecalc}
+              />
+            );
+          })}
 
           <OptionGroup
             title={LAYER_TITLES['potah']}
@@ -857,7 +993,7 @@ const App = () => {
               <div className="detail-content">
                 <h4 className="detail-title">{b.title}</h4>
                 {b.description ? (
-                  <p className="detail-text">{b.description}</p>
+                  <div className="detail-text">{formatDescription(b.description)}</div>
                 ) : null}
               </div>
             </div>
@@ -909,7 +1045,7 @@ const App = () => {
               <div className="detail-content">
                 <h4 className="detail-title">{b.title}</h4>
                 {b.description ? (
-                  <p className="detail-text">{b.description}</p>
+                  <div className="detail-text">{formatDescription(b.description)}</div>
                 ) : null}
               </div>
             </div>
@@ -934,6 +1070,16 @@ const App = () => {
           </button>
         </div>
       </div>
+
+      {/* Shopping Cart Modal */}
+      <ShoppingCart
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cartItems={cartItems}
+        onUpdateQuantity={handleUpdateQuantity}
+        onRemoveItem={handleRemoveItem}
+        totalPrice={cartTotal}
+      />
     </div>
   );
 };
